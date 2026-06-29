@@ -8,10 +8,6 @@ const adapter = new PrismaPg({
 })
 const prisma = new PrismaClient({ adapter })
 
-type TableName = 'refresh_tokens' | 'transactions' | 'categories' | 'users'
-
-const TABLES: TableName[] = ['refresh_tokens', 'transactions', 'categories', 'users']
-
 let app: INestApplication
 
 export const uniq = (p: string) => `${p}-${randomUUID().slice(0, 8)}`
@@ -28,8 +24,17 @@ export function server() {
   return app.getHttpServer()
 }
 
+async function getTableNames(): Promise<string[]> {
+  const rows = await prisma.$queryRawUnsafe<Array<{ tablename: string }>>(
+    `SELECT tablename FROM pg_tables WHERE schemaname = 'public'`,
+  )
+  return rows.map((r) => r.tablename)
+}
+
 export async function truncateAll() {
-  const tableList = TABLES.join(', ')
+  const tables = await getTableNames()
+  if (tables.length === 0) return
+  const tableList = tables.join(', ')
   await prisma.$executeRawUnsafe(`TRUNCATE TABLE ${tableList} RESTART IDENTITY CASCADE`)
 }
 
