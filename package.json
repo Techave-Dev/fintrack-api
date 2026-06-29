@@ -14,7 +14,7 @@
     "test:watch": "dotenv -e .env.test -- vitest",
     "db:migrate": "prisma migrate dev",
     "db:migrate:test": "dotenv -e .env.test -- prisma migrate deploy",
-    "db:generate": "prisma generate --sql",
+    "db:generate": "prisma generate && prisma generate --sql",
     "db:seed": "prisma db seed",
     "lint": "biome check .",
     "format": "biome format --write .",
