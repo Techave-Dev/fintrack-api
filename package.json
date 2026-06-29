@@ -18,7 +18,9 @@
     "db:seed": "prisma db seed",
     "lint": "biome check .",
     "format": "biome format --write .",
-    "typecheck": "tsc --noEmit"
+    "format:check": "biome format .",
+    "typecheck": "tsc --noEmit",
+    "prepare": "husky"
   },
   "engines": {
     "node": ">=20"
@@ -53,6 +55,7 @@
     "@types/passport-jwt": "^4.0.1",
     "@types/supertest": "^7.2.0",
     "dotenv-cli": "^11.0.0",
+    "husky": "^9.1.7",
     "prisma": "^7.8.0",
     "supertest": "^7.2.2",
     "typescript": "^6.0.3",
