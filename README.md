@@ -158,9 +158,9 @@ flowchart LR
 3. Write the Prisma schema in `prisma/schema.prisma`.
 4. Run `npm run db:migrate` to apply.
 5. Run `npm run db:generate` to generate typed Prisma client + TypedSQL.
-6. Implement using **typed Prisma queries**:
+6. Implement using **TypedSQL first, Typed Client as fallback**:
    - DTO (Zod schema)
-   - Service (Prisma typed queries or TypedSQL)
+   - Service (TypedSQL queries in `prisma/sql/*.sql`, Typed Client untuk dynamic filter)
    - Controller (HTTP layer)
    - Module (wire everything)
 7. Mount in `app.module.ts`.
@@ -169,20 +169,10 @@ flowchart LR
 
 ### Prisma typed queries
 
-Two ways to query with type safety:
+**Default: TypedSQL** — tulis SQL di `prisma/sql/*.sql`, dapat type-safe otomatis.
+**Fallback: Typed Client** — hanya untuk dynamic query (filter不确定, column dinamis).
 
-#### 1. Typed Client (CRUD operations)
-
-```typescript
-// ✅ Typed — autocomplete, compile-time errors
-const user = await prisma.user.findUnique({ where: { email } })
-const txns = await prisma.transaction.findMany({
-  where: { userId, type: 'expense' },
-  include: { category: true },
-})
-```
-
-#### 2. TypedSQL (complex queries)
+#### 1. TypedSQL (优先)
 
 Write SQL in `prisma/sql/*.sql` files with type-safe parameters:
 
@@ -191,7 +181,8 @@ Write SQL in `prisma/sql/*.sql` files with type-safe parameters:
 -- @param {Int} $1:userId
 -- @param {DateTime} $2:from
 -- @param {DateTime} $3:to
-SELECT t.*, c.name as "categoryName"
+SELECT t.id, t.amount, t.description, t.type, t.date,
+       c.id as "categoryId", c.name as "categoryName"
 FROM transactions t
 JOIN categories c ON t.category_id = c.id
 WHERE t.user_id = $1
@@ -208,6 +199,24 @@ import { getTransactionsByDateRange } from './generated/prisma/sql'
 const txns = await prisma.$queryRawTyped(
   getTransactionsByDateRange(userId, fromDate, toDate)
 )
+```
+
+#### 2. Typed Client (fallback untuk dynamic queries)
+
+Hanya gunakan ketika query benar-benar dinamis (column/where ditentukan runtime):
+
+```typescript
+// Dynamic filter — column tidak bisa ditentukan di SQL statis
+const where: Prisma.TransactionWhereInput = {}
+if (type) where.type = type
+if (categoryId) where.categoryId = categoryId
+
+const txns = await prisma.transaction.findMany({
+  where,
+  include: { category: true },
+  skip: (page - 1) * limit,
+  take: limit,
+})
 ```
 
 Generated client output: `src/generated/prisma/` (auto-generated, do not edit).
