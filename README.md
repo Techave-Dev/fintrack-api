@@ -1,6 +1,6 @@
 # Finance Tracker API
 
-REST API for personal finance tracking. Built test-first — **103 e2e tests are RED by design**. Your job: make them green.
+REST API for personal finance tracking. Built test-first — **128 e2e tests are RED by design**. Your job: make them green.
 
 ## Stack
 
@@ -153,18 +153,64 @@ flowchart LR
 
 ## TDD workflow
 
-1. Run `npm test` — all 103 tests fail (routes don't exist yet).
+1. Run `npm test` — all 128 tests fail (routes don't exist yet).
 2. Pick the simplest test, e.g. `auth.test.ts` → "POST /auth/register returns 201".
 3. Write the Prisma schema in `prisma/schema.prisma`.
 4. Run `npm run db:migrate` to apply.
-5. Implement:
+5. Run `npm run db:generate` to generate typed Prisma client + TypedSQL.
+6. Implement using **typed Prisma queries**:
    - DTO (Zod schema)
-   - Service (business logic)
+   - Service (Prisma typed queries or TypedSQL)
    - Controller (HTTP layer)
    - Module (wire everything)
-6. Mount in `app.module.ts`.
-7. Run `npm test` — that test green, others still red.
-8. Repeat.
+7. Mount in `app.module.ts`.
+8. Run `npm test` — that test green, others still red.
+9. Repeat.
+
+### Prisma typed queries
+
+Two ways to query with type safety:
+
+#### 1. Typed Client (CRUD operations)
+
+```typescript
+// ✅ Typed — autocomplete, compile-time errors
+const user = await prisma.user.findUnique({ where: { email } })
+const txns = await prisma.transaction.findMany({
+  where: { userId, type: 'expense' },
+  include: { category: true },
+})
+```
+
+#### 2. TypedSQL (complex queries)
+
+Write SQL in `prisma/sql/*.sql` files with type-safe parameters:
+
+```sql
+-- prisma/sql/getTransactionsByDateRange.sql
+-- @param {Int} $1:userId
+-- @param {DateTime} $2:from
+-- @param {DateTime} $3:to
+SELECT t.*, c.name as "categoryName"
+FROM transactions t
+JOIN categories c ON t.category_id = c.id
+WHERE t.user_id = $1
+  AND t.date >= $2
+  AND t.date <= $3
+ORDER BY t.date DESC
+```
+
+Use in TypeScript:
+
+```typescript
+import { getTransactionsByDateRange } from './generated/prisma/sql'
+
+const txns = await prisma.$queryRawTyped(
+  getTransactionsByDateRange(userId, fromDate, toDate)
+)
+```
+
+Generated client output: `src/generated/prisma/` (auto-generated, do not edit).
 
 ## API spec
 
