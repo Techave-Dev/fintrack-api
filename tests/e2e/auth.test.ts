@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken'
 import { describe, expect, it } from 'vitest'
 import { server } from './db'
-import { request, seedUser, uniq } from './helpers'
+import { loginUser, request, seedUser, uniq } from './helpers'
 
 describe('POST /auth/register', () => {
   it('returns 201 with user + accessToken + set-cookie refresh_token', async () => {
